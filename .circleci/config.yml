@@ -14,15 +14,15 @@ jobs:
     environment:
       VAULT_ADDR: http://127.0.0.1:8200
       VAULT_TOKEN: root
+      GOOGLE_WORKLOAD_IDENTITY_PROVIDER: "projects/516216943908/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
+      GOOGLE_SERVICE_ACCOUNT_EMAIL: "github-ci-sa@packer-automation-483407.iam.gserviceaccount.com"
 
     steps:
       - checkout
 
       # ---- GCP Auth ----
       - gcp-cli/install
-      - gcp-cli/authenticate:
-          workload_identity_pool_provider: "projects/516216943908/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
-          service_account: "github-ci-sa@packer-automation-483407.iam.gserviceaccount.com"
+      - gcp-cli/setup
 
       - run:
           name: Validate GCP Auth
@@ -68,7 +68,7 @@ jobs:
             ADMIN_PASSWORD=$(vault kv get -field=admin_password secret/packer/ansible)
             USER1_PASSWORD=$(vault kv get -field=user1_password secret/packer/ansible)
 
-            cat <<EOF > packer_template_gcp/secrets.auto.pkrvars.hcl
+            cat \<<EOF > packer_template_gcp/secrets.auto.pkrvars.hcl
             admin_password = "${ADMIN_PASSWORD}"
             user1_password = "${USER1_PASSWORD}"
             EOF
@@ -96,15 +96,17 @@ jobs:
 
   terraform-deploy:
     executor: ubuntu
+    environment:
+      GOOGLE_WORKLOAD_IDENTITY_PROVIDER: "projects/516216943908/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
+      GOOGLE_SERVICE_ACCOUNT_EMAIL: "github-ci-sa@packer-automation-483407.iam.gserviceaccount.com"
+
     steps:
       - checkout
       - attach_workspace:
           at: .
 
       - gcp-cli/install
-      - gcp-cli/authenticate:
-          workload_identity_pool_provider: "projects/516216943908/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
-          service_account: "github-ci-sa@packer-automation-483407.iam.gserviceaccount.com"
+      - gcp-cli/setup
 
       - run:
           name: Install Terraform
@@ -112,7 +114,6 @@ jobs:
             sudo apt update
             sudo apt install -y terraform
 
-      # ---- SSH KEY (persisted) ----
       - run:
           name: Generate SSH Key
           command: |
@@ -151,15 +152,17 @@ jobs:
 
   terraform-destroy:
     executor: ubuntu
+    environment:
+      GOOGLE_WORKLOAD_IDENTITY_PROVIDER: "projects/516216943908/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
+      GOOGLE_SERVICE_ACCOUNT_EMAIL: "github-ci-sa@packer-automation-483407.iam.gserviceaccount.com"
+
     steps:
       - checkout
       - attach_workspace:
           at: .
 
       - gcp-cli/install
-      - gcp-cli/authenticate:
-          workload_identity_pool_provider: "projects/516216943908/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
-          service_account: "github-ci-sa@packer-automation-483407.iam.gserviceaccount.com"
+      - gcp-cli/setup
 
       - run:
           name: Install Terraform
@@ -193,3 +196,4 @@ workflows:
       - terraform-destroy:
           requires:
             - terraform-deploy
+# End of file
